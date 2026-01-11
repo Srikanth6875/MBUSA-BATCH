@@ -1,19 +1,22 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Knex } from 'knex';
-
 @Injectable()
 export class RooftopInsertService {
   constructor(@Inject('PG_CONNECTION') private readonly db: Knex) { }
 
-  async updateFromCsv(row: Record<string, any>): Promise<number | null> {
-    if (!row?.rt_dealer_id) return null;
+  async updateFromCsv(row: Record<string, any>): Promise<{ rt_id: number }> {
+    if (!row?.rt_dealer_id) {
+      throw new Error('Missing rt_dealer_id in rooftop CSV row');
+    }
 
     const existing = await this.db('rooftop')
       .select('rt_id')
       .where({ rt_dealer_id: row.rt_dealer_id })
       .first();
 
-    if (!existing) return null;
+    if (!existing?.rt_id) {
+      throw new Error(`Rooftop not found for Dealer ID: ${row.rt_dealer_id}`);
+    }
 
     await this.db('rooftop')
       .where({ rt_dealer_id: row.rt_dealer_id })
@@ -23,8 +26,9 @@ export class RooftopInsertService {
         rt_mdate: this.db.fn.now(),
       });
 
-    return existing.rt_id;
+    return { rt_id: existing.rt_id };
   }
+
 
   async bulkUpsert(dealerIds: string[]) {
     if (!dealerIds.length) return;

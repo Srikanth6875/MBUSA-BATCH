@@ -25,13 +25,13 @@ export const DatabaseProvider: Provider = {
       },
     });
 
-    /* try {
+     try {
        await db.raw('select 1');
        logger.log('PostgreSQL database connected successfully');
      } catch (err) {
        logger.error('Database connection failed', err);
        process.exit(1);
-     }*/
+     }
     return db;
   },
 };

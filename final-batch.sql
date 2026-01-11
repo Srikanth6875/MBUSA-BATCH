@@ -183,7 +183,7 @@ CREATE TABLE IF NOT EXISTS import_jobs (
     ij_status VARCHAR(255) NOT NULL,
     ij_total_records INTEGER NOT NULL DEFAULT 0,
     ij_duration_hours INTEGER NOT NULL DEFAULT 0,
-    ij_duration_time INTERVAL NOT NULL DEFAULT '00:00:00',
+    ij_duration_time TEXT NOT NULL DEFAULT '00:00:00',
     ij_start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ij_end_time TIMESTAMP,
     ij_file_name VARCHAR(255),

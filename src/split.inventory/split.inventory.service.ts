@@ -6,7 +6,6 @@ import { SplitFileConfig, SplitResult } from './type.config';
 
 @Injectable()
 export class SplitInventoryService {
-
   async splitFile(config: SplitFileConfig): Promise<SplitResult> {
     const { inputFile, outputDir, delimiter, dealerIdLabel } = config;
     await this.ensureOutputDirectoryExists(outputDir);
@@ -16,7 +15,6 @@ export class SplitInventoryService {
     let dealerIndex = -1;
     let headerLine = '';
     let total = 0, skipped = 0;
-
     const lineReader = this.createLineReader(inputFile);
 
     for await (const line of lineReader) {
@@ -32,7 +30,6 @@ export class SplitInventoryService {
         continue;
       }
       rooftopIds.add(dealerId);
-
       const stream = this.getOrCreateDealerStream(dealerId, outputDir, headerLine, dealerStreams);
       stream.write(line + '\n');
       total++;
@@ -44,8 +41,14 @@ export class SplitInventoryService {
   }
 
   private async ensureOutputDirectoryExists(outputDir: string): Promise<void> {
+    try {
+      await fs.rm(outputDir, { recursive: true, force: true });
+    } catch (err) {
+      // ignore – directory may not exist
+    }
     await fs.mkdir(outputDir, { recursive: true });
   }
+
 
   private createLineReader(inputFile: string) {
     return readline.createInterface({ input: createReadStream(inputFile), crlfDelay: Infinity, });
@@ -79,7 +82,6 @@ export class SplitInventoryService {
       stream.write(headerLine + '\n');
       streamsMap.set(dealerId, stream);
     }
-
     return stream;
   }
 

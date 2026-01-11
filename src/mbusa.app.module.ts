@@ -9,9 +9,12 @@ import { ProcessInventoryModule } from './process.inventory/process.inventory.mo
 import { VehicleDataModule } from './mbusa-job/mongo/vehicle-data.module';
 import { MbusaJobModule } from './mbusa-job/mbusa-job.module';
 import { RooftopInsertService } from './mbusa-job/rooftop-insert.service';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }),
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     SplitInventoryModule,
     SourceInventoryModule,
     ProcessInventoryModule,

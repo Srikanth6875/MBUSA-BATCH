@@ -6,8 +6,17 @@ import { VehicleImportService } from './vehicle-import.service';
 import { ImportFileJobService } from './import-file-job.service';
 
 @Module({
-  imports: [PgDatabaseModule],
-  providers: [MbusaJobLoggerService, RooftopInsertService, VehicleImportService, ImportFileJobService],
-  exports: [MbusaJobLoggerService, RooftopInsertService, VehicleImportService, ImportFileJobService, PgDatabaseModule],
+  providers: [
+    MbusaJobLoggerService,
+    RooftopInsertService,
+    VehicleImportService,
+    ImportFileJobService
+  ],
+  exports: [
+    MbusaJobLoggerService,
+    RooftopInsertService,
+    VehicleImportService,
+    ImportFileJobService,
+  ],
 })
 export class MbusaJobModule { }

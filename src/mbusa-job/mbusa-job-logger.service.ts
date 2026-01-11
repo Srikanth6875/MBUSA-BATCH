@@ -10,51 +10,45 @@ export class MbusaJobLoggerService {
       .insert({
         ij_source: source,
         ij_status: 'RUNNING',
-        ij_start_time: new Date(),
+        ij_start_time: this.db.fn.now()
       })
       .returning('ij_id');
 
     return job.ij_id ?? job;
   }
 
-  async completeJob(jobId: number, totalRecords: number, fileName: string, fileSize: number,) {
-    const result = await this.db('import_jobs')
+  async completeJob(jobId: number, totalRecords: number, fileName: string, fileSize: number) {
+    return this.db('import_jobs')
       .where({ ij_id: jobId })
       .update({
         ij_status: 'COMPLETED',
         ij_total_records: totalRecords,
         ij_file_name: fileName,
         ij_file_size: fileSize,
-        ij_end_time: new Date(),
+        ij_end_time: this.db.fn.now(),
+        ij_duration_time: this.db.raw(
+          "date_trunc('milliseconds', age(now(), ij_start_time))"
+        ),
+        ij_duration_hours: this.db.raw(
+          'ROUND(EXTRACT(EPOCH FROM age(now(), ij_start_time)) / 3600, 4)'
+        )
       });
-
-    return result;
   }
 
   async failJob(jobId: number, error: string) {
-    await this.db('import_jobs')
+    return this.db('import_jobs')
       .where({ ij_id: jobId })
       .update({
         ij_status: 'FAILED',
         ij_error_message: error,
-        ij_end_time: new Date(),
+        ij_end_time: this.db.fn.now(),
+        ij_duration_time: this.db.raw(
+          "date_trunc('milliseconds', age(now(), ij_start_time))"
+        ),
+        ij_duration_hours: this.db.raw(
+          'ROUND(EXTRACT(EPOCH FROM age(now(), ij_start_time)) / 3600, 4)'
+        )
       });
   }
 
-  async updateDuration(jobId: number) {
-    await this.db.raw(`
-    UPDATE import_jobs
-    SET
-      ij_end_time = COALESCE(ij_end_time, NOW()),
-      ij_duration_time = 
-        to_char(
-          COALESCE(ij_end_time, NOW()) - ij_start_time,
-          'HH24:MI:SS'
-        )::TIME,
-      ij_duration_hours =
-        ROUND(EXTRACT(EPOCH FROM (COALESCE(ij_end_time, NOW()) - ij_start_time)) / 3600, 2)
-
-    WHERE ij_id = ?
-  `, [jobId]);
-  }
 }

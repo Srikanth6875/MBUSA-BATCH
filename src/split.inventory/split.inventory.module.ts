@@ -5,7 +5,7 @@ import { PgDatabaseModule } from 'src/database/pg/database.module';
 import { MbusaJobModule } from 'src/mbusa-job/mbusa-job.module';
 
 @Module({
-  imports: [PgDatabaseModule,MbusaJobModule],
+  imports: [MbusaJobModule],
   providers: [SplitInventoryService, MbusaJobLoggerService],
   exports: [SplitInventoryService, MbusaJobLoggerService]
 })

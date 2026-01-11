@@ -4,31 +4,6 @@ import { Model } from 'mongoose';
 import { VehicleOptions } from './vehicle-options.schema';
 import { VehicleDescriptions } from './vehicle-descriptions.schema';
 
-// @Injectable()
-// export class VehicleDataService {
-//   constructor(@InjectModel(VehicleData.name) private readonly model: Model<VehicleData>,) { }
-
-//   async upsertSnapshot(vin: string, data: any): Promise<string> {
-//     const snapshotDate = new Date();
-//     snapshotDate.setHours(0, 0, 0, 0);
-
-//     const doc = await this.model.findOneAndUpdate(
-//       { veh_vin: vin, snapshot_date: snapshotDate },
-//       {
-//         $set: {
-//           ...data,
-//           veh_vin: vin,
-//           snapshot_date: snapshotDate,
-//         },
-//       },
-//       { upsert: true, new: true }
-//     );
-
-//     return doc._id.toString();
-//   }
-// }
-
-
 @Injectable()
 export class VehicleDataService {
   constructor(
