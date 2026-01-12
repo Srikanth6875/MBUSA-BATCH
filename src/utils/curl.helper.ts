@@ -73,3 +73,4 @@ export function mapCsvRecordToDbObject(record: Record<string, string>, mapping: 
     return dbRow;
 }
 
+export const boolToInt = (value: boolean) => value ? 1 : 0;

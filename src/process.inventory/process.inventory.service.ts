@@ -120,7 +120,6 @@ export class ProcessVehicleInventoryService {
             });
           deleted += deletedCount;
         }
-
         console.log(`\n==== File Processing Summary: ${file} ====`);
         console.log(`Total rows: ${total}, Added: ${added}, Updated: ${updated}, Skipped: ${noChange + skipped}, Deleted: ${deleted}\n`);
 
@@ -161,7 +160,6 @@ export class ProcessVehicleInventoryService {
     const modelId = await this.vehicleService.getOrCreateModel(makeId, record['Model']?.trim());
     const trimId = await this.vehicleService.getOrCreateTrim(makeId, modelId, record['Trim']?.trim());
     const imagesCsv = this.parseImages(record);
-
     // Check if vehicle exists
     const existingVehicle = await this.db('vehicles').where({ veh_vin: vin }).first();
 
@@ -171,11 +169,10 @@ export class ProcessVehicleInventoryService {
       veh_make_id: makeId,
       veh_model_id: modelId,
       veh_trim_id: trimId,
-      veh_active: 1 // Always active when coming in CSV
+      veh_active: 1
     };
 
     let vehicleId: number;
-
     if (!existingVehicle) {
       // Insert new vehicle and return veh_id as number
       vehicleId = await this.db('vehicles')
@@ -207,7 +204,6 @@ export class ProcessVehicleInventoryService {
       return 'updated';
     }
   }
-
 
   // ---------------- IMAGE HELPERS ----------------
   private parseImages(record: any): string[] {
