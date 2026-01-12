@@ -9,6 +9,12 @@ import { RooftopInsertService } from 'src/mbusa-job/rooftop-insert.service';
 import { VehicleImportService } from 'src/mbusa-job/vehicle-import.service';
 import { VehicleDataService } from 'src/mbusa-job/mongo/schemas/vehicle-data.service';
 import { ImportFileJobService } from 'src/mbusa-job/import-file-job.service';
+import { INVENTORY_CONST, VehicleAction } from '../utils/vehicle.constants';
+
+type UpsertResult = {
+  action: VehicleAction;
+  vehicleId?: number;
+};
 
 @Injectable()
 export class ProcessVehicleInventoryService {
@@ -31,11 +37,7 @@ export class ProcessVehicleInventoryService {
       const stats = await fs.promises.stat(filePath);
       console.log(`\n==== Started Processing File: ${file} ====\n`);
 
-      const job = await this.importFileJobService.createJob({
-        fileName: file,
-        fileSize: stats.size,
-      });
-
+      const job = await this.importFileJobService.createJob({ fileName: file, fileSize: stats.size, });
       let rooftopProcessed = false;
       const processedVins = new Set<string>();
       let currentRooftopId: number | null = null;
@@ -53,15 +55,13 @@ export class ProcessVehicleInventoryService {
         for await (const record of parser) {
           total++;
           try {
-            const vin = record['VIN']?.trim();
+            const vin = record[INVENTORY_CONST.CSV_HEADERS.VIN]?.trim();
             if (!vin) {
               skipped++;
               console.log(`Row ${total} -> Missing VIN, skipped.`);
               continue;
             }
             processedVins.add(vin);
-
-            console.log(`\nRow ${total} -> VIN: ${vin} | Processing...`);
 
             // Process rooftop once per file
             if (!rooftopProcessed) {
@@ -73,33 +73,20 @@ export class ProcessVehicleInventoryService {
             }
 
             // Upsert vehicle (insert or update)
-            const action = await this.upsertVehicle(record);
+            const { action, vehicleId } = await this.upsertVehicle(record, vin);
 
-            // Log action
-            if (action === 'added') {
-              added++;
-              console.log(`Row ${total} -> VIN: ${vin} | Action: ADDED`);
-            } else if (action === 'updated') {
-              updated++;
-              console.log(`Row ${total} -> VIN: ${vin} | Action: UPDATED (image count changed or reactivated)`);
-            } else if (action === 'noChange') {
-              noChange++;
-              console.log(`Row ${total} -> VIN: ${vin} | Action: SKIPPED (no change)`);
-            } else if (action === 'skipped') {
-              skipped++;
-              console.log(`Row ${total} -> VIN: ${vin} | Action: SKIPPED`);
-            }
+            ({ added, updated, noChange, skipped } =
+              this.logVehicleAction(action, { added, updated, noChange, skipped }, total, vin));
 
-            // Vehicle history (Mongo)
-            const vehicle = await this.db('vehicles').where({ veh_vin: vin }).first();
-            if (vehicle?.veh_id) {
+            if (vehicleId) {
               const historyData = mapCsvRecordToDbObject(record, VEHICLE_HISTORY_COLUMN_MAPPING_MONGO);
-              const mongoIds = await this.historyService.upsertSnapshot(vehicle.veh_id, vin, historyData);
+              const mongoIds = await this.historyService.upsertSnapshot(vehicleId, vin, historyData);
+
               await this.db('vehicles')
-                .where({ veh_id: vehicle.veh_id })
+                .where({ veh_id: vehicleId })
                 .update({
-                  vh_options_mongo_id: mongoIds.optionsId,
-                  vh_description_mongo_id: mongoIds.descriptionId,
+                  vh_options_mongo_id: mongoIds?.optionsId ?? null,
+                  vh_description_mongo_id: mongoIds?.descriptionId ?? null,
                 });
             }
 
@@ -109,23 +96,17 @@ export class ProcessVehicleInventoryService {
           }
         }
         // ===== SOFT DELETE MISSING VINs =====
-        if (currentRooftopId && processedVins.size > 0) {
-          const vinsArray = Array.from(processedVins);
-          const deletedCount = await this.db('vehicles')
+        if (currentRooftopId && processedVins.size) {
+          deleted = await this.db('vehicles')
             .where('veh_rt_id', currentRooftopId)
-            .whereNotIn('veh_vin', vinsArray)
-            .andWhere('veh_status', 1)
-            .update({
-              veh_active: 0,
-            });
-          deleted += deletedCount;
+            .whereNotIn('veh_vin', Array.from(processedVins))
+            .andWhere('veh_status', INVENTORY_CONST.VEHICLE_STATUS.ACTIVE)
+            .update({ veh_active: INVENTORY_CONST.VEHICLE_STATUS.INACTIVE });
         }
-        console.log(`\n==== File Processing Summary: ${file} ====`);
+
         console.log(`Total rows: ${total}, Added: ${added}, Updated: ${updated}, Skipped: ${noChange + skipped}, Deleted: ${deleted}\n`);
 
-        // Complete import job
         await this.importFileJobService.completeJob(job.ifj_id, total, skipped, added, updated, noChange, deleted);
-
       } catch (err) {
         console.error(`File processing failed: ${err.message}`);
         await this.importFileJobService.failJob(job.ifj_id, err.message);
@@ -134,34 +115,37 @@ export class ProcessVehicleInventoryService {
   }
 
   // ---------------- UPSERT VEHICLE ----------------
-  private async upsertVehicle(record: any): Promise<'added' | 'updated' | 'noChange' | 'skipped'> {
-    const vin = record['VIN']?.trim();
-    if (!vin) return 'skipped';
-
-    // Map CSV vehicle data
+  private async upsertVehicle(record: any, vin: string): Promise<UpsertResult> {
     const csvData = mapCsvRecordToDbObject(record, VEHICLES_COLUMN_MAPPING);
-    if (!csvData?.veh_vin) return 'skipped';
+    if (!csvData?.veh_vin) return { action: INVENTORY_CONST.ACTIONS.SKIPPED };
 
     csvData.veh_listing_type = this.normalizeListingType(csvData.veh_listing_type);
     csvData.veh_certified = this.normalizeBoolean(csvData.veh_certified);
     csvData.veh_miles = this.normalizeNumber(csvData.veh_miles);
     csvData.veh_year = this.normalizeNumber(csvData.veh_year);
 
-    const rooftopDealerId = record['Dealer ID']?.trim();
-    if (!rooftopDealerId) return 'skipped';
+    const rooftopDealerId = record[INVENTORY_CONST.CSV_HEADERS.DEALER_ID]?.trim();
+    if (!rooftopDealerId) return { action: INVENTORY_CONST.ACTIONS.SKIPPED };
 
     const rooftopRow = await this.db('rooftop')
       .select('rt_id')
       .where({ rt_dealer_id: rooftopDealerId })
       .first();
-    if (!rooftopRow?.rt_id) return 'skipped';
 
-    const makeId = await this.vehicleService.getOrCreateMake(record['Make']?.trim());
-    const modelId = await this.vehicleService.getOrCreateModel(makeId, record['Model']?.trim());
-    const trimId = await this.vehicleService.getOrCreateTrim(makeId, modelId, record['Trim']?.trim());
+    if (!rooftopRow?.rt_id) return { action: INVENTORY_CONST.ACTIONS.SKIPPED };
+
+    const { makeId, modelId, trimId } = await this.vehicleService.getMakeModelTrimIds(
+      record[INVENTORY_CONST.CSV_HEADERS.MAKE]?.trim(),
+      record[INVENTORY_CONST.CSV_HEADERS.MODEL]?.trim(),
+      record[INVENTORY_CONST.CSV_HEADERS.TRIM]?.trim()
+    );
+
     const imagesCsv = this.parseImages(record);
-    // Check if vehicle exists
-    const existingVehicle = await this.db('vehicles').where({ veh_vin: vin }).first();
+
+    const existingVehicle = await this.db('vehicles')
+      .select('veh_id')
+      .where({ veh_vin: vin })
+      .first();
 
     const vehicleData = {
       ...csvData,
@@ -169,48 +153,42 @@ export class ProcessVehicleInventoryService {
       veh_make_id: makeId,
       veh_model_id: modelId,
       veh_trim_id: trimId,
-      veh_active: 1
+      veh_active: INVENTORY_CONST.VEHICLE_STATUS.ACTIVE,
     };
 
-    let vehicleId: number;
+    // ===== INSERT =====
     if (!existingVehicle) {
-      // Insert new vehicle and return veh_id as number
-      vehicleId = await this.db('vehicles')
+      const [veh_id] = await this.db('vehicles')
         .insert(vehicleData)
-        .returning('veh_id')
-        .then(rows => (typeof rows[0] === 'object' ? rows[0].veh_id : rows[0]));
+        .returning('veh_id');
 
-      if (!vehicleId) return 'skipped';
-
+      const vehicleId = typeof veh_id === 'object' ? veh_id.veh_id : veh_id;
       await this.syncVehicleImages(vehicleId, imagesCsv);
-      return 'added';
-    } else {
-      // Existing vehicle → reactivate and update if images count differs
-      vehicleId = existingVehicle.veh_id;
-      const row = await this.db('images')
-        .where({ vehicle_id: vehicleId })
-        .select('image_src')
-        .first();
 
-      const oldImages = row?.image_src ? row.image_src.split(',').map(i => i.trim()).filter(Boolean) : [];
-
-      // Always set active = 1 for existing vehicle in CSV
-      await this.db('vehicles').where({ veh_id: vehicleId }).update({ ...vehicleData });
-      if (oldImages.length === imagesCsv.length) {
-        // No change in images → noChange
-        return 'noChange';
-      }
-      await this.syncVehicleImages(vehicleId, imagesCsv); // Image count differs → update images
-      return 'updated';
+      return { action: INVENTORY_CONST.ACTIONS.ADDED, vehicleId };
     }
+
+    const vehicleId = existingVehicle.veh_id;
+
+    const row = await this.db('images')
+      .where({ vehicle_id: vehicleId })
+      .select('image_src')
+      .first();
+
+    const oldCount = row?.image_src ? row.image_src.split(',').filter(Boolean).length : 0;
+
+    if (oldCount === imagesCsv.length) {
+      return { action: INVENTORY_CONST.ACTIONS.NO_CHANGE, vehicleId };
+    }
+
+    await this.db('vehicles').where({ veh_id: vehicleId }).update(vehicleData);
+    await this.syncVehicleImages(vehicleId, imagesCsv);
+
+    return { action: INVENTORY_CONST.ACTIONS.UPDATED, vehicleId };
   }
 
-  // ---------------- IMAGE HELPERS ----------------
   private parseImages(record: any): string[] {
-    return (record['ImageList'] || '')
-      .split(',')
-      .map(i => i.trim())
-      .filter(Boolean);
+    return (record['ImageList'] || '').split(',').map(i => i.trim()).filter(Boolean);
   }
 
   private async syncVehicleImages(vehicleId: number, csvImages: string[]) {
@@ -232,5 +210,11 @@ export class ProcessVehicleInventoryService {
 
   private normalizeNumber(v?: any) {
     const n = Number(v); return isNaN(n) ? null : n;
+  }
+
+  private logVehicleAction(action: VehicleAction, counters: any, row: number, vin: string) {
+    counters[action]++;
+    console.log(`Row ${row} -> VIN: ${vin} | ${INVENTORY_CONST.ACTION_LOGS[action]}`);
+    return counters;
   }
 }

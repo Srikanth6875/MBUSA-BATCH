@@ -7,6 +7,6 @@ async function bootstrap() {
   // app.enableShutdownHooks();
   const processor = app.get(MbusaAppService);
   await processor.run();
-  await app.close();
+  // await app.close();
 }
 bootstrap();

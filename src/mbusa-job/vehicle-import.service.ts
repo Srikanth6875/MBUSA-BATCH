@@ -1,4 +1,3 @@
-// vehicle-import.service.ts
 import { Inject, Injectable } from '@nestjs/common';
 import { Knex } from 'knex';
 
@@ -12,14 +11,14 @@ type IdCache = {
 export class VehicleImportService {
   protected cache: IdCache = { make: {}, model: {}, trim: {} };
 
-  constructor(@Inject('PG_CONNECTION') protected readonly db: Knex) {}
+  constructor(@Inject('PG_CONNECTION') protected readonly db: Knex) { }
 
   // -------------------- MAKE --------------------
   async getOrCreateMake(makeName?: string): Promise<number | null> {
     if (!makeName?.trim()) return null;
     makeName = makeName.trim();
 
-    if (this.cache.make[makeName]) return this.cache.make[makeName];
+    if (this.cache.make[makeName]) return this.cache.make[makeName];//captised
 
     // Insert if not exists
     await this.db('make')
@@ -85,5 +84,12 @@ export class VehicleImportService {
 
     this.cache.trim[makeId][modelId][trimName] = row.id;
     return row.id;
+  }
+
+  async getMakeModelTrimIds(makeName?: string, modelName?: string, trimName?: string,): Promise<{ makeId: number | null; modelId: number | null; trimId: number | null }> {
+    const makeId = await this.getOrCreateMake(makeName);
+    const modelId = makeId ? await this.getOrCreateModel(makeId, modelName) : null;
+    const trimId = makeId && modelId ? await this.getOrCreateTrim(makeId, modelId, trimName) : null;
+    return { makeId, modelId, trimId };
   }
 }

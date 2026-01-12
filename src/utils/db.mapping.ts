@@ -25,8 +25,8 @@ export const VEHICLES_COLUMN_MAPPING: Record<string, string> = {
 };
 
 export const VEHICLE_HISTORY_COLUMN_MAPPING_MONGO: Record<string, string> = {
-  Description : 'vh_description',
-  Options : 'vh_options',
+  Description: 'vh_description',
+  Options: 'vh_options',
   // Style_Description : 'vh_style_description',
   // Ext_Color_Generic : 'vh_ext_color_generic',
   // Ext_Color_Code : 'vh_ext_color_code',

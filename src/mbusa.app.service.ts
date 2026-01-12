@@ -22,7 +22,7 @@ export class MbusaAppService {
     private readonly rooftopService: RooftopInsertService,
   ) { }
 
-  // @Cron('0 */12 * * *')
+  // @Cron('0 */2 * * *')
   async run() {
     this.logger.log('Mbusa Batch started...');
 
