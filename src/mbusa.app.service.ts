@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs';
-
 import { SplitFileConfig } from './split.inventory/type.config';
 import { MbusaDownloadService } from './source-inventory/mbusa-download.service';
 import { SplitInventoryService } from './split.inventory/split.inventory.service';
@@ -22,7 +21,9 @@ export class MbusaAppService {
     private readonly rooftopService: RooftopInsertService,
   ) { }
 
-  // @Cron('0 */2 * * *')
+  // @Cron('0 0 15 * * *', {
+  //   timeZone: 'America/Chicago',
+  // }) 
   async run() {
     this.logger.log('Mbusa Batch started...');
 

@@ -73,29 +73,15 @@ export class ProcessVehicleInventoryService {
             }
 
             // Upsert vehicle (insert or update)
-            const { action, vehicleId } = await this.upsertVehicle(record, vin);
-
-            ({ added, updated, noChange, skipped } =
-              this.logVehicleAction(action, { added, updated, noChange, skipped }, total, vin));
-
-            if (vehicleId) {
-              const historyData = mapCsvRecordToDbObject(record, VEHICLE_HISTORY_COLUMN_MAPPING_MONGO);
-              const mongoIds = await this.historyService.upsertSnapshot(vehicleId, vin, historyData);
-
-              await this.db('vehicles')
-                .where({ veh_id: vehicleId })
-                .update({
-                  vh_options_mongo_id: mongoIds?.optionsId ?? null,
-                  vh_description_mongo_id: mongoIds?.descriptionId ?? null,
-                });
-            }
+            const { action } = await this.upsertVehicle(record, vin);
+            ({ added, updated, noChange, skipped } = this.logVehicleAction(action, { added, updated, noChange, skipped }, total, vin));
 
           } catch (err) {
             skipped++;
             console.error(`Row ${total} -> VIN: ${record['VIN'] || 'N/A'} | Inventory row failed: ${err.message}`);
           }
         }
-        // ===== SOFT DELETE MISSING VINs =====
+        // ============= SOFT DELETE MISSING VINs =================
         if (currentRooftopId && processedVins.size) {
           deleted = await this.db('vehicles')
             .where('veh_rt_id', currentRooftopId)
@@ -116,6 +102,7 @@ export class ProcessVehicleInventoryService {
 
   // ---------------- UPSERT VEHICLE ----------------
   private async upsertVehicle(record: any, vin: string): Promise<UpsertResult> {
+
     const csvData = mapCsvRecordToDbObject(record, VEHICLES_COLUMN_MAPPING);
     if (!csvData?.veh_vin) return { action: INVENTORY_CONST.ACTIONS.SKIPPED };
 
@@ -127,11 +114,7 @@ export class ProcessVehicleInventoryService {
     const rooftopDealerId = record[INVENTORY_CONST.CSV_HEADERS.DEALER_ID]?.trim();
     if (!rooftopDealerId) return { action: INVENTORY_CONST.ACTIONS.SKIPPED };
 
-    const rooftopRow = await this.db('rooftop')
-      .select('rt_id')
-      .where({ rt_dealer_id: rooftopDealerId })
-      .first();
-
+    const rooftopRow = await this.db('rooftop').select('rt_id').where({ rt_dealer_id: rooftopDealerId }).first();
     if (!rooftopRow?.rt_id) return { action: INVENTORY_CONST.ACTIONS.SKIPPED };
 
     const { makeId, modelId, trimId } = await this.vehicleService.getMakeModelTrimIds(
@@ -141,11 +124,11 @@ export class ProcessVehicleInventoryService {
     );
 
     const imagesCsv = this.parseImages(record);
+    const historyData = mapCsvRecordToDbObject(record, VEHICLE_HISTORY_COLUMN_MAPPING_MONGO);
 
     const existingVehicle = await this.db('vehicles')
-      .select('veh_id')
-      .where({ veh_vin: vin })
-      .first();
+      .select('veh_id', 'veh_options_mng_id', 'veh_description_mng_id')
+      .where({ veh_vin: vin }).first();
 
     const vehicleData = {
       ...csvData,
@@ -156,36 +139,46 @@ export class ProcessVehicleInventoryService {
       veh_active: INVENTORY_CONST.VEHICLE_STATUS.ACTIVE,
     };
 
-    // ===== INSERT =====
+    // ================= INSERT =================
     if (!existingVehicle) {
-      const [veh_id] = await this.db('vehicles')
-        .insert(vehicleData)
-        .returning('veh_id');
-
+      const [veh_id] = await this.db('vehicles').insert(vehicleData).returning('veh_id');
       const vehicleId = typeof veh_id === 'object' ? veh_id.veh_id : veh_id;
+
       await this.syncVehicleImages(vehicleId, imagesCsv);
+      const mongoIds = await this.historyService.upsertSnapshot(vehicleId, vin, historyData);
+
+      await this.db('vehicles').where({ veh_id: vehicleId }).update({
+        veh_options_mng_id: mongoIds.optionsId ?? null,
+        veh_description_mng_id: mongoIds.descriptionId ?? null,
+      });
 
       return { action: INVENTORY_CONST.ACTIONS.ADDED, vehicleId };
     }
 
+    // ================= UPDATE =================
     const vehicleId = existingVehicle.veh_id;
-
-    const row = await this.db('images')
-      .where({ vehicle_id: vehicleId })
-      .select('image_src')
-      .first();
+    const row = await this.db('images').where({ vehicle_id: vehicleId }).select('image_src').first();
 
     const oldCount = row?.image_src ? row.image_src.split(',').filter(Boolean).length : 0;
+    const imagesChanged = oldCount !== imagesCsv.length;
+    const mongoIds = await this.historyService.upsertSnapshot(vehicleId, vin, historyData);
 
-    if (oldCount === imagesCsv.length) {
+    if (!imagesChanged) {
       return { action: INVENTORY_CONST.ACTIONS.NO_CHANGE, vehicleId };
     }
 
-    await this.db('vehicles').where({ veh_id: vehicleId }).update(vehicleData);
-    await this.syncVehicleImages(vehicleId, imagesCsv);
+    await this.db('vehicles').where({ veh_id: vehicleId }).update({
+      ...vehicleData,
+      veh_options_mng_id: mongoIds.optionsId ?? existingVehicle.veh_options_mng_id,
+      veh_description_mng_id: mongoIds.descriptionId ?? existingVehicle.veh_description_mng_id,
+    });
 
+    if (imagesChanged) {
+      await this.syncVehicleImages(vehicleId, imagesCsv);
+    }
     return { action: INVENTORY_CONST.ACTIONS.UPDATED, vehicleId };
   }
+
 
   private parseImages(record: any): string[] {
     return (record['ImageList'] || '').split(',').map(i => i.trim()).filter(Boolean);

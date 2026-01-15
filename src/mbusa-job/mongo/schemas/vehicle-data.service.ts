@@ -1,54 +1,49 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, HydratedDocument } from 'mongoose';
 import { VehicleOptions } from './vehicle-options.schema';
 import { VehicleDescriptions } from './vehicle-descriptions.schema';
+
+export type VehicleOptionsDocument = HydratedDocument<VehicleOptions>;
+export type VehicleDescriptionsDocument = HydratedDocument<VehicleDescriptions>;
 
 @Injectable()
 export class VehicleDataService {
   constructor(
-    @InjectModel(VehicleOptions.name) private readonly optionsModel: Model<VehicleOptions>,
-    @InjectModel(VehicleDescriptions.name) private readonly descModel: Model<VehicleDescriptions>,
+    @InjectModel(VehicleOptions.name) private readonly optionsModel: Model<VehicleOptionsDocument>,
+    @InjectModel(VehicleDescriptions.name) private readonly descModel: Model<VehicleDescriptionsDocument>,
   ) { }
 
-  private today(): Date {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }
-
   async upsertSnapshot(vehicleId: number, vin: string, data: any) {
-    const snapshotDate = this.today();
 
-    let optionsDoc: VehicleOptions | null = null;
-    let descDoc: VehicleDescriptions | null = null;
+    let optionsDoc: VehicleOptionsDocument | null = null;
+    let descDoc: VehicleDescriptionsDocument | null = null;
 
-    // ===== UPSERT OPTIONS ONLY WHEN DATA EXISTS =====
-    if (data?.vh_options && String(data.vh_options).trim().length > 0) {
+    const hasOptions = data.veh_options.trim().length > 0;
+    const hasDescription = data.veh_description.trim().length > 0;
+
+    if (hasOptions) {
       optionsDoc = await this.optionsModel.findOneAndUpdate(
-        { veh_vin: vin, snapshot_date: snapshotDate },
+        { vehicle_id: vehicleId },
         {
           $set: {
-            veh_vin: vin,
             vehicle_id: vehicleId,
-            vh_options: String(data.vh_options).trim(),
-            snapshot_date: snapshotDate,
+            veh_vin: vin,
+            veh_options: data.veh_options.trim(),
           },
         },
         { upsert: true, new: true },
       );
     }
 
-    // ===== UPSERT DESCRIPTION ONLY WHEN DATA EXISTS =====
-    if (data?.vh_description && String(data.vh_description).trim().length > 0) {
+    if (hasDescription) {
       descDoc = await this.descModel.findOneAndUpdate(
-        { veh_vin: vin, snapshot_date: snapshotDate },
+        { vehicle_id: vehicleId },
         {
           $set: {
-            veh_vin: vin,
             vehicle_id: vehicleId,
-            vh_description: String(data.vh_description).trim(),
-            snapshot_date: snapshotDate,
+            veh_vin: vin,
+            veh_description: data.veh_description.trim(),
           },
         },
         { upsert: true, new: true },
@@ -56,8 +51,8 @@ export class VehicleDataService {
     }
 
     return {
-      optionsId: optionsDoc?._id ?? null,
-      descriptionId: descDoc?._id ?? null,
+      optionsId: optionsDoc?._id?.toString() ?? null,
+      descriptionId: descDoc?._id?.toString() ?? null,
     };
   }
 }

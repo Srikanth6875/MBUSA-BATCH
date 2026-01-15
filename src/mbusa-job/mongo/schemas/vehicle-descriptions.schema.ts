@@ -1,20 +1,19 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { HydratedDocument } from 'mongoose';
+export type VehicleDescriptionsDocument = HydratedDocument<VehicleDescriptions>;
 
 @Schema({ timestamps: true, collection: 'vehicle_descriptions' })
-export class VehicleDescriptions extends Document {
-  @Prop({ required: true })
-  veh_vin: string;
+export class VehicleDescriptions {
 
   @Prop({ required: true })
   vehicle_id: number;
 
-  @Prop()
-  vh_description: string;
+  @Prop({ required: true })
+  veh_vin: string;
 
   @Prop()
-  snapshot_date: Date;
+  veh_description: string;
 }
 
 export const VehicleDescriptionsSchema = SchemaFactory.createForClass(VehicleDescriptions);
-VehicleDescriptionsSchema.index({ veh_vin: 1, snapshot_date: 1 }, { unique: true });
+VehicleDescriptionsSchema.index({ vehicle_id: 1 }, { unique: true });

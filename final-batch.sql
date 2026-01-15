@@ -141,8 +141,8 @@ CREATE TABLE vehicles (
   veh_int_color VARCHAR(255) DEFAULT NULL,
   veh_miles VARCHAR(255) DEFAULT NULL,
   veh_status BOOLEAN DEFAULT TRUE,
-  vh_options_mongo_id VARCHAR(64),
-  vh_description_mongo_id VARCHAR(64),
+  veh_options_mng_id VARCHAR(64),
+  veh_description_mng_id VARCHAR(64),
   veh_ctime TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   veh_mtime TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   veh_dtime TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL
@@ -151,8 +151,8 @@ CREATE TABLE vehicles (
 CREATE INDEX idx_vehicles_make_id ON vehicles(veh_make_id);
 CREATE INDEX idx_vehicles_model_id ON vehicles(veh_model_id);
 CREATE INDEX idx_vehicles_trim_id ON vehicles(veh_trim_id);
-CREATE INDEX idx_vehicles_vh_options_mongo_id ON vehicles(vh_options_mongo_id);
-CREATE INDEX idx_vehicles_vh_description_mongo_id ON vehicles(vh_description_mongo_id);
+CREATE INDEX idx_vehicles_veh_options_mng_id ON vehicles(veh_options_mng_id);
+CREATE INDEX idx_vehicles_veh_description_mongo_id ON vehicles(veh_description_mng_id);
 
 CREATE TRIGGER update_vehicle_modtime
   BEFORE UPDATE ON vehicles
