@@ -1,8 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import { MONGO_COLLECTIONS } from 'src/shared/vehicle.constants';
 export type VehicleDescriptionsDocument = HydratedDocument<VehicleDescriptions>;
 
-@Schema({ timestamps: true, collection: 'vehicle_descriptions' })
+@Schema({ timestamps: true, collection: MONGO_COLLECTIONS.VEHICLE_DESCRIPTION })
 export class VehicleDescriptions {
 
   @Prop({ required: true })
@@ -16,4 +17,4 @@ export class VehicleDescriptions {
 }
 
 export const VehicleDescriptionsSchema = SchemaFactory.createForClass(VehicleDescriptions);
-VehicleDescriptionsSchema.index({ vehicle_id: 1 }, { unique: true });
+VehicleDescriptionsSchema.index({ veh_vin: 1 }, { unique: true });

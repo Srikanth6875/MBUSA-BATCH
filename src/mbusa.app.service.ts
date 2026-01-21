@@ -21,9 +21,9 @@ export class MbusaAppService {
     private readonly rooftopService: RooftopInsertService,
   ) { }
 
-  // @Cron('0 0 15 * * *', {
-  //   timeZone: 'America/Chicago',
-  // }) 
+  @Cron('0 0 15 * * *', {
+    timeZone: 'America/Chicago',
+  }) 
   async run() {
     this.logger.log('Mbusa Batch started...');
 
@@ -36,7 +36,7 @@ export class MbusaAppService {
     let jobId: number | undefined;
 
     try {
-      jobId = await this.jobLogger.createJob('MBUSA-test');
+      jobId = await this.jobLogger.createJob('MBUSA');
       const inputFilePath = await this.downloader.downloadLatestFile(sourceDir);
 
       const stats = fs.statSync(inputFilePath);

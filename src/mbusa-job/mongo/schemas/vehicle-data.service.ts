@@ -24,7 +24,7 @@ export class VehicleDataService {
 
     if (hasOptions) {
       optionsDoc = await this.optionsModel.findOneAndUpdate(
-        { vehicle_id: vehicleId },
+        { veh_vin: vin },
         {
           $set: {
             vehicle_id: vehicleId,
@@ -38,7 +38,7 @@ export class VehicleDataService {
 
     if (hasDescription) {
       descDoc = await this.descModel.findOneAndUpdate(
-        { vehicle_id: vehicleId },
+        { veh_vin: vin },
         {
           $set: {
             vehicle_id: vehicleId,
