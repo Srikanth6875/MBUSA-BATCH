@@ -1,119 +1,123 @@
--- Trigger functions
 CREATE OR REPLACE FUNCTION update_modified_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.make_mtime = CURRENT_TIMESTAMP;
-    RETURN NEW;
+  NEW.make_mtime = CURRENT_TIMESTAMP;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION update_model_modified_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.model_mtime = CURRENT_TIMESTAMP;
-    RETURN NEW;
+  NEW.model_mtime = CURRENT_TIMESTAMP;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION update_trim_modified_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.trim_mtime = CURRENT_TIMESTAMP;
-    RETURN NEW;
+  NEW.trim_mtime = CURRENT_TIMESTAMP;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION update_rooftop_modified_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.rt_mdate = CURRENT_TIMESTAMP;
-    RETURN NEW;
+  NEW.rt_mdate = CURRENT_TIMESTAMP;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION update_vehicle_modified_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.veh_mtime = CURRENT_TIMESTAMP;
-    RETURN NEW;
+  NEW.veh_mtime = CURRENT_TIMESTAMP;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION update_images_modified_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.mtime = CURRENT_TIMESTAMP;
-    RETURN NEW;
+  NEW.mtime = CURRENT_TIMESTAMP;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Table "make"
-CREATE TABLE make (
+
+
+CREATE TABLE veh_make (
   id SERIAL PRIMARY KEY,
   make VARCHAR(255) NOT NULL UNIQUE,
-  make_ctime TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  make_mtime TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  make_dtime TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL
+  make_ctime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  make_mtime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  make_dtime TIMESTAMP DEFAULT NULL
 );
 
 CREATE TRIGGER update_make_modtime
-  BEFORE UPDATE ON make
+  BEFORE UPDATE ON veh_make
   FOR EACH ROW
   EXECUTE FUNCTION update_modified_column();
 
--- Table "model"
-CREATE TABLE model (
+
+CREATE TABLE veh_model (
   id SERIAL PRIMARY KEY,
   make_id INTEGER NOT NULL,
-  model VARCHAR(255),
-  model_ctime TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  model_mtime TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  model_dtime TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL
+  model VARCHAR(255) NOT NULL,
+  model_ctime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  model_mtime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  model_dtime TIMESTAMP DEFAULT NULL
 );
 
-CREATE INDEX idx_make_id ON model(make_id);
+CREATE INDEX idx_veh_model_make_id ON veh_model(make_id);
 
 CREATE TRIGGER update_model_modtime
-  BEFORE UPDATE ON model
+  BEFORE UPDATE ON veh_model
   FOR EACH ROW
   EXECUTE FUNCTION update_model_modified_column();
 
--- Table "trim"
-CREATE TABLE trim (
+ALTER TABLE veh_model ADD CONSTRAINT uq_model_make UNIQUE (make_id, model);
+
+
+CREATE TABLE veh_trim (
   id SERIAL PRIMARY KEY,
   make_id INTEGER NOT NULL,
   model_id INTEGER NOT NULL,
   trim VARCHAR(255) NOT NULL,
-  trim_ctime TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  trim_mtime TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  trim_dtime TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL
+  trim_ctime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  trim_mtime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  trim_dtime TIMESTAMP DEFAULT NULL
 );
 
-CREATE INDEX idx_trim_make_id ON trim(make_id);
-CREATE INDEX idx_trim_model_id ON trim(model_id);
+CREATE INDEX idx_trim_make_id ON veh_trim(make_id);
+CREATE INDEX idx_trim_model_id ON veh_trim(model_id);
 
 CREATE TRIGGER update_trim_modtime
-  BEFORE UPDATE ON trim
+  BEFORE UPDATE ON veh_trim
   FOR EACH ROW
   EXECUTE FUNCTION update_trim_modified_column();
 
--- Table "rooftop"
+ALTER TABLE veh_trim ADD CONSTRAINT uq_trim_make_model UNIQUE (make_id, model_id, trim);
+
+
 CREATE TABLE rooftop (
-  rt_id        SERIAL PRIMARY KEY,
-  rt_guid      UUID DEFAULT gen_random_uuid(),
+  rt_id SERIAL PRIMARY KEY,
+  rt_guid UUID DEFAULT gen_random_uuid(),
   rt_dealer_id VARCHAR(255) NOT NULL UNIQUE,
-  rt_name      TEXT,
-  rt_street    TEXT,
-  rt_city      VARCHAR(255),
-  rt_state     VARCHAR(255),
-  rt_zip       VARCHAR(255),
-  rt_ph        VARCHAR(255),
-  rt_carfax    VARCHAR(255),
-  rt_email     TEXT,
-  rt_site      TEXT,
-  rt_inactive  BOOLEAN NOT NULL DEFAULT FALSE,
-  rt_cdate     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  rt_mdate     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  rt_name TEXT,
+  rt_street TEXT,
+  rt_city VARCHAR(255),
+  rt_state VARCHAR(255),
+  rt_zip VARCHAR(255),
+  rt_ph VARCHAR(255),
+  rt_carfax VARCHAR(255),
+  rt_email TEXT,
+  rt_site TEXT,
+  rt_inactive BOOLEAN NOT NULL DEFAULT FALSE,
+  rt_cdate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  rt_mdate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TRIGGER update_rooftop_modtime
@@ -121,60 +125,137 @@ CREATE TRIGGER update_rooftop_modtime
   FOR EACH ROW
   EXECUTE FUNCTION update_rooftop_modified_column();
 
--- Table "vehicles"
+
+
 CREATE TABLE vehicles (
   veh_id SERIAL PRIMARY KEY,
-  veh_rt_id INTEGER DEFAULT NULL,
+  veh_rt_id INTEGER,
   veh_guid UUID DEFAULT gen_random_uuid(),
-  veh_stock VARCHAR(255) DEFAULT NULL,
-  veh_vin VARCHAR(255) DEFAULT NULL UNIQUE,
+  veh_stock VARCHAR(255),
+  veh_vin VARCHAR(255) UNIQUE,
   veh_active SMALLINT DEFAULT 0,
   veh_listing_type TEXT,
-  veh_certified TEXT DEFAULT NULL,
-  veh_year INTEGER DEFAULT 0,
-  veh_make_id INTEGER DEFAULT NULL,
-  veh_model_id INTEGER DEFAULT NULL,
-  veh_trim_id INTEGER DEFAULT NULL,
-  veh_mod_num VARCHAR(30) DEFAULT NULL,
-  veh_body_type VARCHAR(125) DEFAULT NULL,
-  veh_ext_color VARCHAR(255) DEFAULT NULL,
-  veh_int_color VARCHAR(255) DEFAULT NULL,
-  veh_miles VARCHAR(255) DEFAULT NULL,
+  veh_certified TEXT,
+
+  veh_make_id INTEGER,
+  veh_model_id INTEGER,
+  veh_trim_id INTEGER,
+  veh_model_num VARCHAR(255),
+
+  veh_year_id INTEGER,
+  veh_body_type_id INTEGER,
+  veh_ext_color_id INTEGER,
+  veh_int_color_id INTEGER,
+
+  veh_miles VARCHAR(255),
   veh_status BOOLEAN DEFAULT TRUE,
+
   veh_options_mng_id VARCHAR(64),
   veh_description_mng_id VARCHAR(64),
-  veh_ctime TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  veh_mtime TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  veh_dtime TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL
+
+  veh_ctime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  veh_mtime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  veh_dtime TIMESTAMP DEFAULT NULL
 );
 
 CREATE INDEX idx_vehicles_make_id ON vehicles(veh_make_id);
 CREATE INDEX idx_vehicles_model_id ON vehicles(veh_model_id);
 CREATE INDEX idx_vehicles_trim_id ON vehicles(veh_trim_id);
-CREATE INDEX idx_vehicles_veh_options_mng_id ON vehicles(veh_options_mng_id);
-CREATE INDEX idx_vehicles_veh_description_mongo_id ON vehicles(veh_description_mng_id);
+CREATE INDEX idx_vehicles_year_id ON vehicles(veh_year_id);
+CREATE INDEX idx_vehicles_body_type_id ON vehicles(veh_body_type_id);
+CREATE INDEX idx_vehicles_ext_color_id ON vehicles(veh_ext_color_id);
+CREATE INDEX idx_vehicles_int_color_id ON vehicles(veh_int_color_id);
+CREATE INDEX idx_vehicles_options_mng_id ON vehicles(veh_options_mng_id);
+CREATE INDEX idx_vehicles_description_mng_id ON vehicles(veh_description_mng_id);
 
 CREATE TRIGGER update_vehicle_modtime
   BEFORE UPDATE ON vehicles
   FOR EACH ROW
   EXECUTE FUNCTION update_vehicle_modified_column();
 
--- Table "images"
-CREATE TABLE images (
+
+CREATE TABLE veh_images (
   id SERIAL PRIMARY KEY,
   vehicle_id INTEGER NOT NULL UNIQUE,
-  image_src TEXT NULL,
-  ctime TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  mtime TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  dtime TIMESTAMP WITHOUT TIME ZONE DEFAULT NULL
+  image_src TEXT,
+  ctime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  mtime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  dtime TIMESTAMP DEFAULT NULL
 );
 
-CREATE INDEX idx_images_vehicle_id ON images(vehicle_id);
+CREATE INDEX idx_images_vehicle_id ON veh_images(vehicle_id);
 
 CREATE TRIGGER update_images_modtime
-  BEFORE UPDATE ON images
+  BEFORE UPDATE ON veh_images
   FOR EACH ROW
   EXECUTE FUNCTION update_images_modified_column();
+
+
+CREATE TABLE veh_body_type (
+  id SERIAL PRIMARY KEY,
+  body_type VARCHAR(255) NOT NULL UNIQUE,
+  ctime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  mtime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  dtime TIMESTAMP DEFAULT NULL
+);
+
+CREATE OR REPLACE FUNCTION update_body_type_mtime()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.mtime = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_body_type_modtime
+  BEFORE UPDATE ON veh_body_type
+  FOR EACH ROW
+  EXECUTE FUNCTION update_body_type_mtime();
+
+
+CREATE TABLE veh_color (
+  id SERIAL PRIMARY KEY,
+  color VARCHAR(255) NOT NULL UNIQUE,
+  ctime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  mtime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  dtime TIMESTAMP DEFAULT NULL
+);
+
+CREATE OR REPLACE FUNCTION update_color_mtime()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.mtime = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_color_modtime
+  BEFORE UPDATE ON veh_color
+  FOR EACH ROW
+  EXECUTE FUNCTION update_color_mtime();
+
+
+CREATE TABLE veh_year (
+  id SERIAL PRIMARY KEY,
+  year INTEGER NOT NULL UNIQUE,
+  ctime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  mtime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  dtime TIMESTAMP DEFAULT NULL
+);
+
+CREATE OR REPLACE FUNCTION update_vehicle_year_mtime()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.mtime = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_vehicle_year_modtime
+  BEFORE UPDATE ON veh_year
+  FOR EACH ROW
+  EXECUTE FUNCTION update_vehicle_year_mtime();
+
 
 -- Table "import_jobs"
 CREATE TABLE IF NOT EXISTS import_jobs (
@@ -207,12 +288,3 @@ CREATE TABLE IF NOT EXISTS import_file_jobs (
     ifj_end_time TIMESTAMP,
     ifj_error_message TEXT
 );
--- --------------------------------------------------------
-
-ALTER TABLE make ADD CONSTRAINT uq_make_make UNIQUE (make);
-ALTER TABLE model ADD CONSTRAINT uq_model_make UNIQUE (make_id, model);
-ALTER TABLE trim ADD CONSTRAINT uq_trim_make_model UNIQUE (make_id, model_id, trim);
-ALTER TABLE vehicles ADD CONSTRAINT uq_vehicles_vin UNIQUE (veh_vin);
-ALTER TABLE images ADD CONSTRAINT uq_images_vehicle UNIQUE (vehicle_id, image_src);
-
-

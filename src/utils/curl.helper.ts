@@ -1,6 +1,5 @@
 import { spawn } from 'child_process';
 import * as fs from 'fs';
-
 export interface CurlDownloadOptions {
     url: string;
     output: string;
@@ -10,7 +9,6 @@ export interface CurlDownloadOptions {
 
 export function curlDownload(opts: CurlDownloadOptions): Promise<void> {
     const { url, output, timeoutMs = 300_000, retries = 3 } = opts;
-
     return new Promise((resolve, reject) => {
         const args = [
             '-L',
@@ -25,9 +23,7 @@ export function curlDownload(opts: CurlDownloadOptions): Promise<void> {
         ];
 
         const curl = spawn('curl', args);
-
         let stderr = '';
-
         curl.stderr.on('data', d => stderr += d.toString());
 
         curl.on('close', code => {
@@ -45,7 +41,6 @@ export function curlDownload(opts: CurlDownloadOptions): Promise<void> {
 export function curlGet(url: string): Promise<string> {
     return new Promise((resolve, reject) => {
         const curl = spawn('curl', ['-sL', url]);
-
         let data = '';
         let err = '';
 
@@ -61,16 +56,5 @@ export function curlGet(url: string): Promise<string> {
     });
 }
 
-export function mapCsvRecordToDbObject(record: Record<string, string>, mapping: Record<string, string>): Record<string, any> {
-    const dbRow: Record<string, any> = {};
 
-    for (const [csvLabel, dbColumn] of Object.entries(mapping)) {
-        const value = record[csvLabel];
-        if (value !== undefined && value !== '') {
-            dbRow[dbColumn] = value.trim();
-        }
-    }
-    return dbRow;
-}
 
-export const boolToInt = (value: boolean) => value ? 1 : 0;

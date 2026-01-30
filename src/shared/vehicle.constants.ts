@@ -17,11 +17,13 @@ export const INVENTORY_CONST = {
         UPDATED: 'updated',
         NO_CHANGE: 'noChange',
         SKIPPED: 'skipped',
+        TOTAL: 'total',
+        DELETED: 'deleted'
     } as const,
 
     ACTION_LOGS: {
         added: 'Action: ADDED',
-        updated: 'Action: UPDATED (image count changed or reactivated)',
+        updated: 'Action: UPDATED (image count changed)',
         noChange: 'Action: NO_CHANGE',
         skipped: 'Action: SKIPPED',
     },

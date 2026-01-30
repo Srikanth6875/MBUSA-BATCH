@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, HydratedDocument } from 'mongoose';
 import { VehicleOptions } from './vehicle-options.schema';
 import { VehicleDescriptions } from './vehicle-descriptions.schema';
+import { normalizeNullableString } from 'src/utils/safe-trim-value';
 
 export type VehicleOptionsDocument = HydratedDocument<VehicleOptions>;
 export type VehicleDescriptionsDocument = HydratedDocument<VehicleDescriptions>;
@@ -15,37 +16,24 @@ export class VehicleDataService {
   ) { }
 
   async upsertSnapshot(vehicleId: number, vin: string, data: any) {
-
     let optionsDoc: VehicleOptionsDocument | null = null;
     let descDoc: VehicleDescriptionsDocument | null = null;
 
-    const hasOptions = data.veh_options.trim().length > 0;
-    const hasDescription = data.veh_description.trim().length > 0;
+    const options = normalizeNullableString(data?.veh_options);
+    const description = normalizeNullableString(data?.veh_description);
 
-    if (hasOptions) {
+    if (options) {
       optionsDoc = await this.optionsModel.findOneAndUpdate(
         { veh_vin: vin },
-        {
-          $set: {
-            vehicle_id: vehicleId,
-            veh_vin: vin,
-            veh_options: data.veh_options.trim(),
-          },
-        },
+        { $set: { vehicle_id: vehicleId, veh_vin: vin, veh_options: options } },
         { upsert: true, new: true },
       );
     }
 
-    if (hasDescription) {
+    if (description) {
       descDoc = await this.descModel.findOneAndUpdate(
         { veh_vin: vin },
-        {
-          $set: {
-            vehicle_id: vehicleId,
-            veh_vin: vin,
-            veh_description: data.veh_description.trim(),
-          },
-        },
+        { $set: { vehicle_id: vehicleId, veh_vin: vin, veh_description: description } },
         { upsert: true, new: true },
       );
     }

@@ -24,15 +24,7 @@ export class ImportFileJobService {
     return job;
   }
 
-  async completeJob(
-    jobId: number,
-    total: number,
-    skipped: number,
-    added: number,
-    updated: number,
-    noChange: number,
-    deleted: number,
-  ) {
+  async completeJob(jobId: number, total: number, skipped: number, added: number, updated: number, noChange: number, deleted: number,) {
     await this.db(TABLE_NAMES.IMPORT_FILE_JOBS)
       .where({ ifj_id: jobId })
       .update({

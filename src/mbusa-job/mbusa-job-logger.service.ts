@@ -18,13 +18,7 @@ export class MbusaJobLoggerService {
     return job.ij_id ?? job;
   }
 
-  async completeJob(
-    jobId: number,
-    totalRecords: number,
-    fileName: string,
-    fileSize: number,
-    status: string = 'COMPLETED',
-  ) {
+  async completeJob(jobId: number, totalRecords: number, fileName: string, fileSize: number, status: string = 'COMPLETED',) {
     return this.db(TABLE_NAMES.IMPORT_JOBS)
       .where({ ij_id: jobId })
       .update({
@@ -33,14 +27,11 @@ export class MbusaJobLoggerService {
         ij_file_name: fileName,
         ij_file_size: fileSize,
         ij_end_time: this.db.fn.now(),
-        ij_duration_time: this.db.raw(
-          "date_trunc('milliseconds', age(now(), ij_start_time))"
-        ),
-        ij_duration_hours: this.db.raw(
-          'ROUND(EXTRACT(EPOCH FROM age(now(), ij_start_time)) / 3600, 4)'
-        ),
+        ij_duration_time: this.db.raw("date_trunc('milliseconds', age(now(), ij_start_time))"),
+        ij_duration_hours: this.db.raw('ROUND(EXTRACT(EPOCH FROM age(now(), ij_start_time)) / 3600, 4)'),
       });
   }
+
 
 
   async failJob(jobId: number, error: string) {
@@ -50,12 +41,18 @@ export class MbusaJobLoggerService {
         ij_status: 'FAILED',
         ij_error_message: error,
         ij_end_time: this.db.fn.now(),
-        ij_duration_time: this.db.raw(
-          "date_trunc('milliseconds', age(now(), ij_start_time))"
-        ),
-        ij_duration_hours: this.db.raw(
-          'ROUND(EXTRACT(EPOCH FROM age(now(), ij_start_time)) / 3600, 4)'
-        )
+        ij_duration_time: this.db.raw("date_trunc('milliseconds', age(now(), ij_start_time))"),
+        ij_duration_hours: this.db.raw('ROUND(EXTRACT(EPOCH FROM age(now(), ij_start_time)) / 3600, 4)')
+      });
+  }
+
+  async skipJob(jobId: number, reason: string) {
+    await this.db(TABLE_NAMES.IMPORT_JOBS)
+      .where({ ij_id: jobId })
+      .update({
+        ij_status: 'SKIPPED',
+        ij_end_time: this.db.fn.now(),
+        ij_error_message: reason,
       });
   }
 }

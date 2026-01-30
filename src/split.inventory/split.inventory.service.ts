@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { createReadStream, createWriteStream, promises as fs, WriteStream } from 'fs';
 import * as path from 'path';
 import * as readline from 'readline';
-import { SplitFileConfig, SplitResult } from './type.config';
+import { SplitFileConfig, SplitResult } from '../shared/type.config';
 
 @Injectable()
 export class SplitInventoryService {

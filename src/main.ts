@@ -5,7 +5,7 @@ import { MbusaAppService } from './mbusa.app.service';
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(MbusaAppModule);
   // app.enableShutdownHooks();
-  // const processor = app.get(MbusaAppService);
-  // await processor.run();
+  const processor = app.get(MbusaAppService);
+  await processor.run();
 }
 bootstrap();
