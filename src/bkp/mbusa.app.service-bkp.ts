@@ -25,7 +25,7 @@
 
 //   @Cron('0 0 15 * * *', {
 //     timeZone: 'America/Chicago',
-//   }) 
+//   })
 //   async run() {
 //     this.logger.log('Mbusa Batch started...');
 
@@ -78,11 +78,6 @@
 //   }
 // }
 
-
-
-
-
-
 //LATEST CODE
 // import { Injectable, Logger } from '@nestjs/common';
 // import * as path from 'path';
@@ -110,7 +105,7 @@
 
 //   // @Cron('0 0 15 * * *', {
 //   //   timeZone: 'America/Chicago',
-//   // }) 
+//   // })
 //   async run() {
 //     this.logger.log('Mbusa Batch Processing started...');
 

@@ -20,11 +20,11 @@ export class MbusaAppService {
     private readonly jobLogger: MbusaJobLoggerService,
     private readonly processor: ProcessVehicleInventoryService,
     private readonly rooftopService: RooftopInsertService,
-  ) { }
+  ) {}
 
   // @Cron('0 0 15 * * *', {
   //   timeZone: 'America/Chicago',
-  // }) 
+  // })
   async run() {
     this.logger.log('Mbusa Batch Processing started...');
 
@@ -36,7 +36,8 @@ export class MbusaAppService {
 
     try {
       jobId = await this.jobLogger.createJob('MBUSA');
-      const downloadResult = await this.downloader.downloadLatestFile(sourceDir);
+      const downloadResult =
+        await this.downloader.downloadLatestFile(sourceDir);
 
       if (downloadResult.status === INVENTORY_CONST.ACTIONS.SKIPPED) {
         if (jobId) await this.jobLogger.skipJob(jobId, downloadResult.reason);
@@ -54,13 +55,18 @@ export class MbusaAppService {
       const result = await this.service.splitFile(config);
       await this.rooftopService.bulkUpsert(result.rooftopIds);
       await this.processor.processFolder(outputDirPath);
-      await this.jobLogger.completeJob(jobId, result.total, serverFileName, serverFileSize);
+      await this.jobLogger.completeJob(
+        jobId,
+        result.total,
+        serverFileName,
+        serverFileSize,
+      );
 
       this.logger.log('Mbusa Batch completed successfully.');
     } catch (e: any) {
-      if (jobId) await this.jobLogger.failJob(jobId, e.message || 'Unknown error');
+      if (jobId)
+        await this.jobLogger.failJob(jobId, e.message || 'Unknown error');
       throw e;
     }
   }
 }
-

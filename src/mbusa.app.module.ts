@@ -24,6 +24,5 @@ import { ScheduleModule } from '@nestjs/schedule';
     MbusaJobModule,
   ],
   providers: [MbusaAppService, RooftopInsertService],
-
 })
-export class MbusaAppModule { }
+export class MbusaAppModule {}

@@ -6,8 +6,16 @@ import { VehicleDataModule } from 'src/mbusa-job/mongo/vehicle-data.module';
 import { VehicleUpsertService } from './vehicle-upsert.service';
 
 @Module({
-    imports: [MbusaJobModule, VehicleDataModule,],
-    providers: [ProcessVehicleInventoryService, RooftopInsertService, VehicleUpsertService],
-    exports: [ProcessVehicleInventoryService, RooftopInsertService, VehicleUpsertService]
+  imports: [MbusaJobModule, VehicleDataModule],
+  providers: [
+    ProcessVehicleInventoryService,
+    RooftopInsertService,
+    VehicleUpsertService,
+  ],
+  exports: [
+    ProcessVehicleInventoryService,
+    RooftopInsertService,
+    VehicleUpsertService,
+  ],
 })
-export class ProcessInventoryModule { }
+export class ProcessInventoryModule {}

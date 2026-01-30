@@ -4,7 +4,7 @@ import { DatabaseService } from './database.service';
 
 @Global()
 @Module({
-    providers: [DatabaseProvider, DatabaseService],
-    exports: ['PG_CONNECTION'],
+  providers: [DatabaseProvider, DatabaseService],
+  exports: ['PG_CONNECTION'],
 })
-export class PgDatabaseModule { }
+export class PgDatabaseModule {}

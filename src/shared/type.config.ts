@@ -16,12 +16,21 @@ export type DownloadServerFile = {
   size: number;
 };
 
-export type DownloadResult = | {
-  status: 'downloaded';
-  filePath: string;
-  serverFileName: string;
-  serverFileSize: number;
-} | {
-  status: 'skipped';
-  reason: string;
-};
+export type DownloadResult =
+  | {
+      status: 'downloaded';
+      filePath: string;
+      serverFileName: string;
+      serverFileSize: number;
+    }
+  | {
+      status: 'skipped';
+      reason: string;
+    };
+
+export interface ImportJobRow {
+  ij_id: number;
+  ij_source: string;
+  ij_file_name: string;
+  ij_file_size: string | number | null;
+}

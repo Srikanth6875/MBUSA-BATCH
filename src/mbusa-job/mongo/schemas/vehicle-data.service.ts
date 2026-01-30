@@ -11,9 +11,11 @@ export type VehicleDescriptionsDocument = HydratedDocument<VehicleDescriptions>;
 @Injectable()
 export class VehicleDataService {
   constructor(
-    @InjectModel(VehicleOptions.name) private readonly optionsModel: Model<VehicleOptionsDocument>,
-    @InjectModel(VehicleDescriptions.name) private readonly descModel: Model<VehicleDescriptionsDocument>,
-  ) { }
+    @InjectModel(VehicleOptions.name)
+    private readonly optionsModel: Model<VehicleOptionsDocument>,
+    @InjectModel(VehicleDescriptions.name)
+    private readonly descModel: Model<VehicleDescriptionsDocument>,
+  ) {}
 
   async upsertSnapshot(vehicleId: number, vin: string, data: any) {
     let optionsDoc: VehicleOptionsDocument | null = null;
@@ -33,7 +35,13 @@ export class VehicleDataService {
     if (description) {
       descDoc = await this.descModel.findOneAndUpdate(
         { veh_vin: vin },
-        { $set: { vehicle_id: vehicleId, veh_vin: vin, veh_description: description } },
+        {
+          $set: {
+            vehicle_id: vehicleId,
+            veh_vin: vin,
+            veh_description: description,
+          },
+        },
         { upsert: true, new: true },
       );
     }

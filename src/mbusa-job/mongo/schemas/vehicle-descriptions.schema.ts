@@ -5,7 +5,6 @@ export type VehicleDescriptionsDocument = HydratedDocument<VehicleDescriptions>;
 
 @Schema({ timestamps: true, collection: MONGO_COLLECTIONS.VEHICLE_DESCRIPTION })
 export class VehicleDescriptions {
-
   @Prop({ required: true })
   vehicle_id: number;
 
@@ -16,5 +15,6 @@ export class VehicleDescriptions {
   veh_description: string;
 }
 
-export const VehicleDescriptionsSchema = SchemaFactory.createForClass(VehicleDescriptions);
+export const VehicleDescriptionsSchema =
+  SchemaFactory.createForClass(VehicleDescriptions);
 VehicleDescriptionsSchema.index({ veh_vin: 1 }, { unique: true });

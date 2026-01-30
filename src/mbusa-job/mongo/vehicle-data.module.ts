@@ -1,8 +1,14 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { VehicleDataService } from './schemas/vehicle-data.service';
-import { VehicleOptions, VehicleOptionsSchema } from './schemas/vehicle-options.schema';
-import { VehicleDescriptions, VehicleDescriptionsSchema } from './schemas/vehicle-descriptions.schema';
+import {
+  VehicleOptions,
+  VehicleOptionsSchema,
+} from './schemas/vehicle-options.schema';
+import {
+  VehicleDescriptions,
+  VehicleDescriptionsSchema,
+} from './schemas/vehicle-descriptions.schema';
 
 @Module({
   imports: [
@@ -14,4 +20,4 @@ import { VehicleDescriptions, VehicleDescriptionsSchema } from './schemas/vehicl
   providers: [VehicleDataService],
   exports: [VehicleDataService],
 })
-export class VehicleDataModule { }
+export class VehicleDataModule {}

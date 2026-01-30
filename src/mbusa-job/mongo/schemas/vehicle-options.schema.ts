@@ -7,7 +7,6 @@ export type VehicleOptionsDocument = HydratedDocument<VehicleOptions>;
 
 @Schema({ timestamps: true, collection: MONGO_COLLECTIONS.VEHICLE_OPTIONS })
 export class VehicleOptions {
-
   @Prop({ required: true })
   vehicle_id: number;
 

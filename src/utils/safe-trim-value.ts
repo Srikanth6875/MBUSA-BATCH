@@ -48,7 +48,10 @@ export function normalizeCsvValue(value: any): string | number | undefined {
 export function normalizeStringArray(value: any, delimiter = ','): string[] {
   const str = normalizeString(value);
   if (!str) return [];
-  return str.split(delimiter).map(v => v.trim()).filter(Boolean);
+  return str
+    .split(delimiter)
+    .map((v) => v.trim())
+    .filter(Boolean);
 }
 
 export const boolToInt = (value: boolean) => (value ? 1 : 0);

@@ -9,7 +9,7 @@ import { ImportFileJobService } from './import-file-job.service';
     MbusaJobLoggerService,
     RooftopInsertService,
     VehicleImportService,
-    ImportFileJobService
+    ImportFileJobService,
   ],
   exports: [
     MbusaJobLoggerService,
@@ -18,4 +18,4 @@ import { ImportFileJobService } from './import-file-job.service';
     ImportFileJobService,
   ],
 })
-export class MbusaJobModule { }
+export class MbusaJobModule {}

@@ -11,16 +11,16 @@ type IdCache = {
 
 @Injectable()
 export class VehicleImportService {
-  protected cache: IdCache = { make: {}, model: {}, trim: {}, veh_lookup: {}, };
+  protected cache: IdCache = { make: {}, model: {}, trim: {}, veh_lookup: {} };
 
-  constructor(@Inject('PG_CONNECTION') protected readonly db: Knex) { }
+  constructor(@Inject('PG_CONNECTION') protected readonly db: Knex) {}
 
   // -------------------- MAKE --------------------
   async getOrCreateMake(makeName?: string): Promise<number | null> {
     if (!makeName?.trim()) return null;
     makeName = makeName.trim();
 
-    if (this.cache.make[makeName]) return this.cache.make[makeName];//captised
+    if (this.cache.make[makeName]) return this.cache.make[makeName]; //captised
 
     // Insert if not exists
     await this.db(TABLE_NAMES.VEHICLE_MAKE)
@@ -29,7 +29,10 @@ export class VehicleImportService {
       .ignore();
 
     // Always select to ensure we get the id
-    const row = await this.db(TABLE_NAMES.VEHICLE_MAKE).select('id').where({ make: makeName }).first();
+    const row = await this.db(TABLE_NAMES.VEHICLE_MAKE)
+      .select('id')
+      .where({ make: makeName })
+      .first();
     if (!row?.id) return null;
 
     this.cache.make[makeName] = row.id;
@@ -37,12 +40,16 @@ export class VehicleImportService {
   }
 
   // -------------------- MODEL --------------------
-  async getOrCreateModel(makeId: number | null, modelName?: string): Promise<number | null> {
+  async getOrCreateModel(
+    makeId: number | null,
+    modelName?: string,
+  ): Promise<number | null> {
     if (!makeId || !modelName?.trim()) return null;
     modelName = modelName.trim();
 
     this.cache.model[makeId] ??= {};
-    if (this.cache.model[makeId][modelName]) return this.cache.model[makeId][modelName];
+    if (this.cache.model[makeId][modelName])
+      return this.cache.model[makeId][modelName];
 
     await this.db(TABLE_NAMES.VEHICLE_MODEL)
       .insert({ make_id: makeId, model: modelName })
@@ -88,17 +95,34 @@ export class VehicleImportService {
     return row.id;
   }
 
-  async getMakeModelTrimIds(makeName?: string, modelName?: string, trimName?: string,): Promise<{ makeId: number | null; modelId: number | null; trimId: number | null }> {
+  async getMakeModelTrimIds(
+    makeName?: string,
+    modelName?: string,
+    trimName?: string,
+  ): Promise<{
+    makeId: number | null;
+    modelId: number | null;
+    trimId: number | null;
+  }> {
     const makeId = await this.getOrCreateMake(makeName);
-    const modelId = makeId ? await this.getOrCreateModel(makeId, modelName) : null;
-    const trimId = makeId && modelId ? await this.getOrCreateTrim(makeId, modelId, trimName) : null;
+    const modelId = makeId
+      ? await this.getOrCreateModel(makeId, modelName)
+      : null;
+    const trimId =
+      makeId && modelId
+        ? await this.getOrCreateTrim(makeId, modelId, trimName)
+        : null;
     return { makeId, modelId, trimId };
   }
 
   // =====================================================
   // GENERIC LOOKUP (YEAR, BODY TYPE, COLOR, ETC)
   // =====================================================
-  async VehicleLookupId(table: string, column: string, value?: string | number | null,): Promise<number | null> {
+  async VehicleLookupId(
+    table: string,
+    column: string,
+    value?: string | number | null,
+  ): Promise<number | null> {
     if (value === undefined || value === null || value === '') return null;
     this.cache.veh_lookup[table] ??= {};
 
@@ -106,9 +130,15 @@ export class VehicleImportService {
       return this.cache.veh_lookup[table][value];
     }
 
-    await this.db(table).insert({ [column]: value }).onConflict(column).ignore();
+    await this.db(table)
+      .insert({ [column]: value })
+      .onConflict(column)
+      .ignore();
 
-    const row = await this.db(table).select('id').where({ [column]: value }).first();
+    const row = await this.db(table)
+      .select('id')
+      .where({ [column]: value })
+      .first();
     if (!row?.id) return null;
 
     this.cache.veh_lookup[table][value] = row.id;

@@ -1,14 +1,17 @@
-import { normalizeCsvValue } from "./safe-trim-value";
+import { normalizeCsvValue } from './safe-trim-value';
 
-export function mapCsvRecordToDbObject(record: Record<string, any>, mapping: Record<string, string>): Record<string, any> {
-    const dbRow: Record<string, any> = {};
+export function mapCsvRecordToDbObject(
+  record: Record<string, any>,
+  mapping: Record<string, string>,
+): Record<string, any> {
+  const dbRow: Record<string, any> = {};
 
-    for (const [csvLabel, dbColumn] of Object.entries(mapping)) {
-        const cleaned = normalizeCsvValue(record?.[csvLabel]);
+  for (const [csvLabel, dbColumn] of Object.entries(mapping)) {
+    const cleaned = normalizeCsvValue(record?.[csvLabel]);
 
-        if (cleaned !== undefined) {
-            dbRow[dbColumn] = cleaned;
-        }
+    if (cleaned !== undefined) {
+      dbRow[dbColumn] = cleaned;
     }
-    return dbRow;
+  }
+  return dbRow;
 }

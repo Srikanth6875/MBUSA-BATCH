@@ -1,15 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Knex } from 'knex';
 import { TABLE_NAMES } from 'src/shared/vehicle.constants';
-
 export interface FileJobCreateDto {
   fileName: string;
   fileSize: number;
 }
-
 @Injectable()
 export class ImportFileJobService {
-  constructor(@Inject('PG_CONNECTION') private readonly db: Knex) { }
+  constructor(@Inject('PG_CONNECTION') private readonly db: Knex) {}
 
   async createJob(dto: FileJobCreateDto) {
     const [job] = await this.db(TABLE_NAMES.IMPORT_FILE_JOBS)
@@ -24,7 +22,15 @@ export class ImportFileJobService {
     return job;
   }
 
-  async completeJob(jobId: number, total: number, skipped: number, added: number, updated: number, noChange: number, deleted: number,) {
+  async completeJob(
+    jobId: number,
+    total: number,
+    skipped: number,
+    added: number,
+    updated: number,
+    noChange: number,
+    deleted: number,
+  ) {
     await this.db(TABLE_NAMES.IMPORT_FILE_JOBS)
       .where({ ifj_id: jobId })
       .update({
