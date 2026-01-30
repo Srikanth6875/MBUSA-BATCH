@@ -13,53 +13,49 @@ import {
 @Injectable()
 export class MbusaDownloadService {
   private BASE_URL = 'https://vendordownloads.homenetinc.com/MBUSA/';
-  constructor(@Inject('PG_CONNECTION') private readonly db: Knex) {}
+  constructor(@Inject('PG_CONNECTION') private readonly db: Knex) { }
 
   async downloadLatestFile(targetDir: string): Promise<DownloadResult> {
     if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
 
     const html = await curlGet(this.BASE_URL);
 
-    //Extract raw <pre> block to preserve spacing
+    // Extract raw <pre> block to preserve spacing
     const preMatch = html.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i);
     if (!preMatch) throw new Error('MBUSA directory listing not found');
 
-    const preText = preMatch[1]
-      .replace(/<a[^>]*>/g, '')
-      .replace(/<\/a>/g, '')
-      .replace(/&nbsp;/g, ' ');
-    // Split lines by <br>
+    const preText = preMatch[1].replace(/&nbsp;/g, ' ');
     const lines = preText.split(/<br\s*\/?>/i);
-    const serverFiles: DownloadServerFile[] = [];
+
+    let latest: DownloadServerFile | null = null;
+    let latestTs = 0;
 
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed.includes('MBUSA')) continue;
+
       const match = trimmed.match(
         /\d{1,2}\/\d{1,2}\/\d{4}\s+\d{1,2}:\d{2}\s+[AP]M\s+(\d+)\s+<A HREF="[^"]*">(MBUSA\d{14}\.csv)<\/A>/i,
       );
-      if (match)
-        serverFiles.push({
-          name: `/MBUSA/${match[2]}`,
-          size: Number(match[1]),
-        });
-    }
 
-    console.log('Parsed files:', serverFiles);
-    if (!serverFiles.length) throw new Error('No MBUSA CSV files parsed');
+      if (!match) continue;
 
-    //Pick latest by timestamp in filename
-    let latest: DownloadServerFile | null = null;
-    let latestTs = 0;
+      const file: DownloadServerFile = {
+        name: `/MBUSA/${match[2]}`,
+        size: Number(match[1]),
+      };
 
-    for (const f of serverFiles) {
-      const ts = this.parseTimestamp(f.name);
+      const ts = this.parseTimestamp(file.name);
+
       if (ts > latestTs) {
         latestTs = ts;
-        latest = f;
+        latest = file;
       }
     }
-    if (!latest) throw new Error('Unable to determine latest MBUSA file');
+
+    if (!latest) throw new Error('No MBUSA CSV files found');
+
+    console.log('Latest MBUSA file detected:', latest);
 
     const serverFileName = path.basename(latest.name);
     const serverFileSize = latest.size;
@@ -79,6 +75,7 @@ export class MbusaDownloadService {
       return { status: INVENTORY_CONST.ACTIONS.SKIPPED, reason };
     }
 
+    // Delete older CSVs in directory
     for (const f of fs.readdirSync(targetDir)) {
       if (f.endsWith('.csv') && f !== serverFileName) {
         fs.unlinkSync(path.join(targetDir, f));
@@ -89,6 +86,7 @@ export class MbusaDownloadService {
     const fileUrl = new URL(latest.name, this.BASE_URL).toString();
 
     console.log('Downloading new MBUSA file:', fileUrl);
+
     await curlDownload({
       url: fileUrl,
       output: filePath,
@@ -96,17 +94,23 @@ export class MbusaDownloadService {
       retries: 3,
     });
 
-    return { status: 'downloaded', filePath, serverFileName, serverFileSize };
+    return {
+      status: 'downloaded',
+      filePath,
+      serverFileName,
+      serverFileSize,
+    };
   }
 
   private parseTimestamp(filename: string): number {
     const m = filename.match(/MBUSA[-_]?(\d{14})\.csv$/i);
     if (!m) return 0;
+
     const s = m[1];
     return new Date(
-      +s.slice(4, 8), // year
+      +s.slice(4, 8),  // year
       +s.slice(0, 2) - 1, // month
-      +s.slice(2, 4), // day
+      +s.slice(2, 4),  // day
       +s.slice(8, 10), // hour
       +s.slice(10, 12), // minute
       +s.slice(12, 14), // second

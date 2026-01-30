@@ -20,7 +20,7 @@ export class MbusaAppService {
     private readonly jobLogger: MbusaJobLoggerService,
     private readonly processor: ProcessVehicleInventoryService,
     private readonly rooftopService: RooftopInsertService,
-  ) {}
+  ) { }
 
   // @Cron('0 0 15 * * *', {
   //   timeZone: 'America/Chicago',
