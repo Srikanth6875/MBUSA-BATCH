@@ -35,9 +35,9 @@ export class MbusaAppService {
     if (!fs.existsSync(sourceDir)) fs.mkdirSync(sourceDir, { recursive: true });
 
     try {
-      jobId = await this.jobLogger.createJob('MBUSA');
-      const downloadResult =
-        await this.downloader.downloadLatestFile(sourceDir);
+      const downloadResult = await this.measureExecution('MBUSA Download', () =>
+        this.downloader.downloadLatestFile(sourceDir),
+      );
 
       if (downloadResult.status === INVENTORY_CONST.ACTIONS.SKIPPED) {
         if (jobId) await this.jobLogger.skipJob(jobId, downloadResult.reason);
@@ -52,6 +52,7 @@ export class MbusaAppService {
         dealerIdLabel: 'Dealer ID',
       };
 
+      jobId = await this.jobLogger.createJob('MBUSA');
       const result = await this.service.splitFile(config);
       await this.rooftopService.bulkUpsert(result.rooftopIds);
       await this.processor.processFolder(outputDirPath);
@@ -68,5 +69,40 @@ export class MbusaAppService {
         await this.jobLogger.failJob(jobId, e.message || 'Unknown error');
       throw e;
     }
+  }
+
+  async measureExecution<T>(label: string, fn: () => Promise<T>): Promise<T> {
+    const startTime = Date.now();
+    const startDate = new Date();
+
+    this.logger.log(`${label} started at ${startDate.toISOString()}`);
+
+    const result = await fn();
+
+    const endTime = Date.now();
+    const endDate = new Date();
+
+    const durationMs = endTime - startTime;
+    const durationSec = durationMs / 1000;
+
+    let extraInfo = '';
+    if (result) {
+      const sizeBytes = Number((result as any)?.serverFileSize ?? 0);
+      const sizeMB = sizeBytes / (1024 * 1024);
+
+      const speedMBps = durationSec > 0 ? sizeMB / durationSec : 0;
+
+      extraInfo = ` | Size=${sizeMB.toFixed(2)}MB | Speed=${
+        Number.isFinite(speedMBps) ? speedMBps.toFixed(2) : '0.00'
+      }MB/s`;
+    }
+
+    this.logger.log(
+      `${label} completed at ${endDate.toISOString()} | Duration=${durationSec.toFixed(
+        2,
+      )}s${extraInfo}`,
+    );
+
+    return result;
   }
 }
